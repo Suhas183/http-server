@@ -8,8 +8,12 @@ def main():
     # Uncomment this to pass the first stage
     #
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    server_socket.accept()
-    server_socket.sendall('HTTP/1.1 200 OK\r\n\r\n')# wait for client
+    client_socket, addr = server_socket.accept()
+    msg = 'HTTP/1.1 200 OK\r\n\r\n'
+    encoded_string = msg.encode()
+    client_socket.sendall(encoded_string)
+    client_socket.close()
+    server_socket.close()
 
 
 if __name__ == "__main__":
