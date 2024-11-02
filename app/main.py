@@ -1,4 +1,5 @@
-import socket  # noqa: F401
+import socket
+from .constants import *
 
 def parse_request_lines(http_request):
     http_request_line = http_request.split('\r\n')[0]
@@ -32,19 +33,32 @@ def main():
     http_method, request_target = parse_request_lines(http_request)
     host, user_agent, accept = parse_headers(http_request)
     
-    msg = None
+    if len(request_target.split('/')) == 3:
+        #Status line
+        request_body = request_target.split('/')[2]
+        
+        msg = f'{http_version} {status_ok} {status_ok_text}\r\n'
+        
+        #Headers
+        content_type = 'text/plain'
+        content_length = len(request_body)
+        
+        msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        print(msg)
+        msg += f'{request_body}'
+        
+        client_socket.sendall(msg.encode())
     
-    if request_target == '/' or request_target is None:
-        msg = 'HTTP/1.1 200 OK\r\n\r\n'
+    elif len(request_target.split('/')) == 2 and request_target.split('/')[1]:
+        msg =  f'{http_version} {status_not_found} {status_not_found_text}\r\n\r\n'
+        client_socket.sendall(msg.encode())
     
     else:
-        msg = 'HTTP/1.1 404 Not Found\r\n\r\n'    
-   
-    encoded_string = msg.encode()
-    client_socket.sendall(encoded_string)
+        msg = f'{http_version} {status_ok} {status_ok_text}\r\n\r\n'
+        client_socket.sendall(msg.encode())  
+    
     client_socket.close()
     server_socket.close()
-
 
 if __name__ == "__main__":
     main()
