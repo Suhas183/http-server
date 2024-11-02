@@ -23,13 +23,26 @@ def parse_headers(http_request):
        
     return host, user_agent, accept
 
+def parse_body(http_request):
+    return http_request.split('\r\n')[-1]
+
 def client_handler(client_socket, directory = None):
     http_request = client_socket.recv(4096).decode()
     
     http_method, request_target = parse_request_lines(http_request)
     host, user_agent, accept = parse_headers(http_request)
+    body = parse_body(http_request)
     
-    if directory:
+    if directory and http_method == 'POST':
+        file_name = request_target.split('/')[2]
+        with open(os.path.join(directory,file_name), "w") as file:
+            file.write(body)
+            
+        msg = f'{http_version} {status_created} {status_created_text}\r\n\r\n'  
+        
+        client_socket.sendall(msg.encode())      
+        
+    elif directory and http_method == 'GET':    
         msg = f'{http_version} {status_ok} {status_ok_text}\r\n'
         #Headers
         content_type = 'application/octet-stream'
