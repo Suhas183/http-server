@@ -1,4 +1,5 @@
 import socket
+import threading
 from .constants import *
 
 def parse_request_lines(http_request):
@@ -20,14 +21,7 @@ def parse_headers(http_request):
        
     return host, user_agent, accept
 
-def main():
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!")
-
-    # Uncomment this to pass the first stage
-    #
-    server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    client_socket, addr = server_socket.accept()
+def client_handler(client_socket):
     http_request = client_socket.recv(4096).decode()
     
     http_method, request_target = parse_request_lines(http_request)
@@ -69,7 +63,16 @@ def main():
         client_socket.sendall(msg.encode())  
     
     client_socket.close()
-    server_socket.close()
+
+def main():
+    # You can use print statements as follows for debugging, they'll be visible when running tests.
+    print("Logs from your program will appear here!")
+    
+    server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
+    server_socket.listen()
+    while True:
+        client_soc, client_address = server_socket.accept()
+        threading.Thread(target=client_handler,args=(client_soc,), daemon=True).start()
 
 if __name__ == "__main__":
     main()
