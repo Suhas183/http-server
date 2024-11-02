@@ -23,13 +23,33 @@ def parse_headers(http_request):
        
     return host, user_agent, accept
 
-def client_handler(client_socket):
+def client_handler(client_socket, directory = None):
     http_request = client_socket.recv(4096).decode()
     
     http_method, request_target = parse_request_lines(http_request)
     host, user_agent, accept = parse_headers(http_request)
     
-    if request_target.startswith('/echo'):
+    if directory:
+        msg = f'{http_version} {status_ok} {status_ok_text}\r\n'
+        #Headers
+        content_type = 'application/octet-stream'
+        content_length = 0
+        content = ''
+        
+        try:
+            file_name = request_target.split('/')[2]
+            with open(os.path.join(directory,file_name), "r") as file:
+                content = file.read()
+                content_length = len(content)
+        except FileNotFoundError:
+            msg =  f'{http_version} {status_not_found} {status_not_found_text}\r\n\r\n'
+            client_socket.sendall(msg.encode())
+            
+        msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        msg += content
+        client_socket.sendall(msg.encode())
+        
+    elif request_target.startswith('/echo'):
         #Status line
         request_body = request_target.split('/')[2]
         
@@ -69,18 +89,27 @@ def client_handler(client_socket):
 def main():
     # You can use print statements as follows for debugging, they'll be visible when running tests.
     print("Logs from your program will appear here!")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--description')
-    
-    args = parser.parse_args()
-    directory = args.directory
-    print(directory)
     
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
     server_socket.listen()
     while True:
-        client_soc, client_address = server_socket.accept()
-        threading.Thread(target=client_handler,args=(client_soc,), daemon=True).start()
+            client_soc, client_address = server_socket.accept()
+            parser = argparse.ArgumentParser()
+            parser.add_argument('--directory', default=None)
+            args = parser.parse_args()
+            directory = args.directory
+            
+            if directory:
+                if not os.path.isdir(directory):
+                    msg = f'{http_version} {status_ok} {status_ok_text}\r\n\r\n'
+                    client_soc.sendall(msg.encode())
+                    
+                else:
+                    threading.Thread(target=client_handler,args=(client_soc,directory,), daemon=True).start()
+            
+            else:
+                threading.Thread(target=client_handler,args=(client_soc,), daemon=True).start()         
+            
 
 if __name__ == "__main__":
     main()
