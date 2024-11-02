@@ -22,8 +22,10 @@ def parse_headers(http_request):
     accept = headers.get('Accept')
     try:
         accept_encoding = headers.get('Accept-Encoding')
-        if accept_encoding != 'gzip':
+        if 'gzip' not in accept_encoding:
             accept_encoding = None
+        else:
+            accept_encoding = 'gzip'   
     except:
         accept_encoding = None        
        
@@ -87,6 +89,7 @@ def client_handler(client_socket, directory = None):
         else:
             msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
         msg += request_body
+        print(msg)
         client_socket.sendall(msg.encode())
         
     elif request_target.startswith('/user-agent'):
