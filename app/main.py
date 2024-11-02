@@ -1,5 +1,7 @@
 import socket
 import threading
+import argparse
+import os
 from .constants import *
 
 def parse_request_lines(http_request):
@@ -67,6 +69,12 @@ def client_handler(client_socket):
 def main():
     # You can use print statements as follows for debugging, they'll be visible when running tests.
     print("Logs from your program will appear here!")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--description')
+    
+    args = parser.parse_args()
+    directory = args.directory
+    print(directory)
     
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
     server_socket.listen()
