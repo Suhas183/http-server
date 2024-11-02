@@ -20,8 +20,14 @@ def parse_headers(http_request):
     host = headers.get('Host')
     user_agent = headers.get('User-Agent')
     accept = headers.get('Accept')
+    try:
+        accept_encoding = headers.get('Accept-Encoding')
+        if accept_encoding != 'gzip':
+            accept_encoding = None
+    except:
+        accept_encoding = None        
        
-    return host, user_agent, accept
+    return host, user_agent, accept, accept_encoding
 
 def parse_body(http_request):
     return http_request.split('\r\n')[-1]
@@ -30,7 +36,7 @@ def client_handler(client_socket, directory = None):
     http_request = client_socket.recv(4096).decode()
     
     http_method, request_target = parse_request_lines(http_request)
-    host, user_agent, accept = parse_headers(http_request)
+    host, user_agent, accept, accept_encoding = parse_headers(http_request)
     body = parse_body(http_request)
     
     if directory and http_method == 'POST':
@@ -57,8 +63,12 @@ def client_handler(client_socket, directory = None):
         except FileNotFoundError:
             msg =  f'{http_version} {status_not_found} {status_not_found_text}\r\n\r\n'
             client_socket.sendall(msg.encode())
-            
-        msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        
+        if accept_encoding:
+            msg += f'Content-Encoding: {accept_encoding}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        else:
+            msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+                    
         msg += content
         client_socket.sendall(msg.encode())
         
@@ -72,9 +82,11 @@ def client_handler(client_socket, directory = None):
         content_type = 'text/plain'
         content_length = len(request_body)
         
-        msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
-        msg += f'{request_body}'
-        
+        if accept_encoding:
+            msg += f'Content-Encoding: {accept_encoding}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        else:
+            msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        msg += request_body
         client_socket.sendall(msg.encode())
         
     elif request_target.startswith('/user-agent'):
@@ -84,9 +96,12 @@ def client_handler(client_socket, directory = None):
         content_type = 'text/plain'
         content_length = len(user_agent)
         
-        msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
-        msg += f'{user_agent}'
+        if accept_encoding:
+            msg += f'Content-Encoding: {accept_encoding}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        else:
+            msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
         
+        msg += f'{user_agent}'
         client_socket.sendall(msg.encode())
     
     elif len(request_target.split('/')) == 2 and request_target.split('/')[1]:
