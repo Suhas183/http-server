@@ -2,6 +2,7 @@ import socket
 import threading
 import argparse
 import os
+import gzip
 from .constants import *
 
 def parse_request_lines(http_request):
@@ -85,12 +86,16 @@ def client_handler(client_socket, directory = None):
         content_length = len(request_body)
         
         if accept_encoding:
+            encoded_request_body = request_body.encode()
+            gzip_compressed = gzip.compress(encoded_request_body)
+            content_length = len(gzip_compressed)
             msg += f'Content-Encoding: {accept_encoding}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+            client_socket.sendall(msg.encode())
+            client_socket.sendall(gzip_compressed)
         else:
             msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
-        msg += request_body
-        print(msg)
-        client_socket.sendall(msg.encode())
+            msg += request_body
+            client_socket.sendall(msg.encode())
         
     elif request_target.startswith('/user-agent'):
         msg = f'{http_version} {status_ok} {status_ok_text}\r\n'
