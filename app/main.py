@@ -33,7 +33,7 @@ def main():
     http_method, request_target = parse_request_lines(http_request)
     host, user_agent, accept = parse_headers(http_request)
     
-    if len(request_target.split('/')) == 3:
+    if request_target.startswith('/echo'):
         #Status line
         request_body = request_target.split('/')[2]
         
@@ -44,8 +44,19 @@ def main():
         content_length = len(request_body)
         
         msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
-        print(msg)
         msg += f'{request_body}'
+        
+        client_socket.sendall(msg.encode())
+        
+    elif request_target.startswith('/user-agent'):
+        msg = f'{http_version} {status_ok} {status_ok_text}\r\n'
+        
+        #Headers
+        content_type = 'text/plain'
+        content_length = len(user_agent)
+        
+        msg += f'Content-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n'
+        msg += f'{user_agent}'
         
         client_socket.sendall(msg.encode())
     
